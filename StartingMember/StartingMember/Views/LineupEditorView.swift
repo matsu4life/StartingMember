@@ -21,6 +21,7 @@ struct LineupEditorView: View {
     @State private var showShareSheet = false
     @State private var shareImage: UIImage?
     @State private var showSavedToast = false
+    @State private var showResetConfirm = false
 
     // 自由位置調整：slot.id → (xRatio, yRatio) の上書き
     @State private var positionOverrides: [UUID: CGPoint] = [:]   // pitch座標系（ピクセル）
@@ -170,11 +171,17 @@ struct LineupEditorView: View {
 
                 HStack(spacing: 12) {
                     Button {
-                        assignments = [:]
-                        positionOverrides = [:]
+                        showResetConfirm = true
                     } label: {
                         Image(systemName: "arrow.counterclockwise")
                             .foregroundColor(.white.opacity(0.7))
+                    }
+                    .confirmationDialog("メンバーをリセットしますか？", isPresented: $showResetConfirm, titleVisibility: .visible) {
+                        Button("リセット", role: .destructive) {
+                            assignments = [:]
+                            positionOverrides = [:]
+                        }
+                        Button("キャンセル", role: .cancel) {}
                     }
 
                     Menu {
@@ -281,7 +288,16 @@ struct LineupEditorView: View {
             )
         }
         .sheet(isPresented: $showShareSheet) {
-            if let img = shareImage { ShareSheet(image: img) }
+            if let img = shareImage {
+                ShareSheet(image: img)
+            } else {
+                ProgressView("画像を生成中...")
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            showShareSheet = false
+                        }
+                    }
+            }
         }
     }
 
@@ -386,22 +402,25 @@ struct LineupEditorView: View {
 
     @MainActor
     private func captureAndShare() {
-        let renderer = ImageRenderer(content:
-            LineupShareCard(
-                team: team,
-                formation: formation,
-                assignments: assignments,
-                positionOverrides: positionOverrides,
-                opponentName: opponentName,
-                allPlayers: allPlayers,
-                selectedStaffIDs: selectedStaffIDs,
-                pitchStyle: pitchStyle
-            )
-            .frame(width: 390, height: 700)
-        )
-        renderer.scale = 3.0
-        shareImage = renderer.uiImage
         showShareSheet = true
+        Task { @MainActor in
+            let renderer = ImageRenderer(content:
+                LineupShareCard(
+                    team: team,
+                    formation: formation,
+                    assignments: assignments,
+                    positionOverrides: positionOverrides,
+                    opponentName: opponentName,
+                    allPlayers: allPlayers,
+                    selectedStaffIDs: selectedStaffIDs,
+                    pitchStyle: pitchStyle,
+                    matchDate: matchDate
+                )
+                .frame(width: 390, height: 700)
+            )
+            renderer.scale = 3.0
+            shareImage = renderer.uiImage
+        }
     }
 }
 
@@ -538,6 +557,7 @@ struct LineupShareCard: View {
     let allPlayers: [Player]
     var selectedStaffIDs: Set<UUID> = []
     var pitchStyle: PitchStyle = .stripes
+    var matchDate: Date = Date()
 
     private func player(for slot: FormationSlot) -> Player? {
         guard let pid = assignments[slot.id] else { return nil }
@@ -603,7 +623,7 @@ struct LineupShareCard: View {
         let f = DateFormatter()
         f.locale = Locale(identifier: "ja_JP")
         f.dateFormat = "M/d"
-        return f.string(from: Date())
+        return f.string(from: matchDate)
     }
 }
 

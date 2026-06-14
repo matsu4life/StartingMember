@@ -17,7 +17,7 @@ struct PlayerAvatar: View {
                                 .resizable()
                                 .scaledToFill()
                         } else {
-                            Text(player.initial)
+                            Text("\(player.number)")
                                 .font(.system(size: size * 0.4, weight: .medium))
                                 .foregroundColor(.white)
                         }

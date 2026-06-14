@@ -44,6 +44,16 @@ struct PlayerEditView: View {
                                       systemImage: "photo")
                             }
 
+                            if player.originalPhotoData != nil {
+                                Button(role: .destructive) {
+                                    player.photoData = nil
+                                    player.originalPhotoData = nil
+                                    player.backgroundRemoved = false
+                                } label: {
+                                    Label("写真を削除", systemImage: "trash")
+                                }
+                            }
+
                             if isProcessing {
                                 HStack(spacing: 6) {
                                     ProgressView()
