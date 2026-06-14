@@ -151,12 +151,8 @@ class AppStore: ObservableObject {
     // MARK: - 永続化（端末ローカルのみ）
 
     private func save() {
-        do {
-            let data = try JSONEncoder().encode(teams)
-            try data.write(to: saveURL, options: .atomic)
-        } catch {
-            print("保存に失敗：\(error)")
-        }
+        guard let data = try? JSONEncoder().encode(teams) else { return }
+        try? data.write(to: saveURL, options: .atomic)
     }
 
     private func load() {
